@@ -337,6 +337,7 @@ footer{color:var(--muted);font-size:13px;text-align:center}
   go.hidden = false;
   let somLigado = true;   // escolha da pessoa no botão do canto
   let travado = false;    // o navegador segurou a música até o primeiro toque
+  let viuInicio = false;  // o vídeo já voltou para o começo da moça dançando
   let fase = 'tela';      // 'tela' = tela da professora; 'danca' = vídeo da moça; 'fim' = já foi para o jogo
   const tocar = el=>{ if(!el) return Promise.resolve(); const pr = el.play(); return pr && pr.catch ? pr : Promise.resolve(); };
   const aplicar = ()=>{
@@ -384,19 +385,28 @@ footer{color:var(--muted);font-size:13px;text-align:center}
   };
   // confere o tempo do vídeo a cada quadro, para cortar logo no fim do brilho
   const vigiar = ()=>{
-    if(fase==='danca'){ if(v.currentTime >= FIM_DANCA) return entrarNoJogo(); }
+    if(fase==='danca'){
+      // só conta o fim depois que o vídeo voltou mesmo para o começo (no celular a volta demora um pouco)
+      if(!v.seeking && v.currentTime < FIM_DANCA - .5) viuInicio = true;
+      if(viuInicio && v.currentTime >= FIM_DANCA) return entrarNoJogo();
+    }
     else if(fase==='tela'){ if(v.currentTime < TITULO - .2 || (v.duration && v.currentTime >= v.duration - .12)) irParaTitulo(); }
     else return;
     requestAnimationFrame(vigiar);
   };
   requestAnimationFrame(vigiar);
-  v.addEventListener('ended', ()=>{ if(fase==='tela'){ irParaTitulo(); tocar(v).catch(()=>{}); } else entrarNoJogo(); });
+  v.addEventListener('ended', ()=>{
+    if(fase==='tela'){ irParaTitulo(); tocar(v).catch(()=>{}); }
+    else if(fase==='danca' && !viuInicio){ try{ v.currentTime = 0; }catch(e){} tocar(v).catch(()=>{}); } // ainda não voltou para a moça
+    else entrarNoJogo();
+  });
   v.addEventListener('error', ()=>{ if(fase==='danca') entrarNoJogo(); });
   // Começar: toca a moça dançando, do início, com som
   // Começar: toca a moça dançando (versão curta), com som, e depois vai para a escolha da música
   go.addEventListener('click', ()=>{
     if(fase!=='tela') return;
-    fase = 'danca'; go.hidden = true;
+    fase = 'danca'; go.hidden = true; viuInicio = false;
+    setTimeout(()=>{ if(fase==='danca') entrarNoJogo(); }, 12000); // se o vídeo travar, não fica preso na moça
     stopListen();
     if(mus){ mus.pause(); }
     try{ v.currentTime = 0; }catch(e){}
