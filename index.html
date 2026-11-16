@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pista de Dança 3D</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1605,6 +1608,14 @@ const GAMES = {
     async open(g){
       const btn = $('#camGo'), err = $('#camErr');
       const fail = msg=>{ if(err){ err.hidden = false; err.textContent = msg; } if(btn){ btn.disabled = false; btn.textContent = 'Tentar de novo'; } };
+      // aberto como arquivo (WhatsApp, pasta de downloads...) o celular não libera a câmera: só pelo link https
+      const LINK = 'https://nogueiracoelhokeitiane-oss.github.io/Pista-de-Dan-a/';
+      const foraDoSite = !window.isSecureContext || location.protocol==='content:' || (location.protocol==='file:' && /Android|iPhone|iPad/i.test(navigator.userAgent));
+      if(foraDoSite){
+        if(err){ err.hidden = false; err.innerHTML = 'Aqui a câmera não funciona, porque o jogo foi aberto como arquivo. No celular, a câmera só funciona pelo link do jogo: <a href="'+LINK+'" style="color:#ffd23f;font-weight:900;word-break:break-all">'+LINK+'</a>'; }
+        if(btn){ btn.disabled = false; btn.textContent = 'Abrir pelo link'; btn.onclick = e=>{ e.preventDefault(); e.stopImmediatePropagation(); location.href = LINK; }; }
+        return;
+      }
       if(btn){ btn.disabled = true; btn.textContent = 'Abrindo a câmera...'; }
       if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ fail('Este navegador não deixa usar a câmera aqui. Abra o jogo no Chrome, Edge ou Safari atualizado, por um endereço https ou direto do arquivo no computador.'); return; }
       try{
