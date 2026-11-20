@@ -1926,7 +1926,7 @@ function useRef(style){
 }
 function poseAngles(lm, W, H){
   return SEGS.map(([a,b])=>{ const A = lm[a], B = lm[b];
-    if(!A || !B || (A.visibility||0) < .5 || (B.visibility||0) < .5) return null;
+    if(!A || !B || (A.visibility||0) < .4 || (B.visibility||0) < .4) return null;
     return Math.atan2((B.y-A.y)*H, (B.x-A.x)*W); });
 }
 function simOne(A, k, mir){
@@ -1943,7 +1943,7 @@ function simOne(A, k, mir){
 }
 /* compara a pose com a coreografia. Cada jogador tem um atraso diferente em relação à música (câmera, reação),
    então o jogo testa atrasos de 0 a 0,75 s e lado normal ou espelhado, e fica com o que vem combinando melhor. */
-const CAM_LAGS = [0,1,2,3,4,5,6];
+const CAM_LAGS = [0,1,2,3,4,5,6,7,8,9,10,11,12]; // até 1,5 s de atraso
 function camSim(g, A, t){
   const ema = g.ema || (g.ema = {});
   let bestKey = null, bestE = -1, vals = {};
@@ -1988,7 +1988,7 @@ function passoOk(p, i){
   let m = 0; for(let j=0;j<n;j++) m += s[j];
   if(m/n < CAM_PASS) return false;
   // quando os personagens mexem os braços, o jogador também tem que mexer (ficar parado não vale)
-  if(REF_MOT[i] >= 1){ const mv = p.mot.length ? p.mot.reduce((a,b)=>a+b,0)/p.mot.length : 0; if(mv < .5*REF_MOT[i]) return false; }
+  if(REF_MOT[i] >= .5 && p.mot.length >= 3){ const mv = p.mot.reduce((a,b)=>a+b,0)/p.mot.length; if(mv < .4*REF_MOT[i]) return false; }
   return true;
 }
 /* estrelas douradas da dança com a câmera: 100% dos passos certos = 5 estrelas */
@@ -2203,7 +2203,7 @@ const GAMES = {
       if(GAME.cur!==g) return;
       const lm = r.poseLandmarks, W = g.vid.videoWidth || 640, H = g.vid.videoHeight || 480;
       const A = lm ? poseAngles(lm, W, H) : null;
-      const armsOk = A && [0,1,2,3].filter(i=>A[i]!==null).length >= 3;
+      const armsOk = A && [0,1,2,3].filter(i=>A[i]!==null).length >= 2;
       let r2 = null;
       if(armsOk && g.phase==='dance') r2 = camSim(g, A, g.sentT);
       const s = r2 ? r2.s : null;
@@ -2222,9 +2222,9 @@ const GAMES = {
       if(s===null){ p.miss++; return; }
       p.sims.push(s);
       // movimento dos braços, medido cerca de 8 vezes por segundo para não contar o tremido da câmera
-      if(A.slice(0,4).every(a=>a!==null)){
+      { // conta só as partes do braço que aparecem nos dois quadros, e completa para as 4
         const dt = g.sentT - (g.lastT||0);
-        if(g.lastA && dt >= .1 && dt < .6){ let v = 0; for(let j=0;j<4;j++) v += angDiff(A[j], g.lastA[j]); p.mot.push(v/dt); }
+        if(g.lastA && dt >= .1 && dt < .6){ let v = 0, n = 0; for(let j=0;j<4;j++) if(A[j]!==null && g.lastA[j]!==null){ v += angDiff(A[j], g.lastA[j]); n++; } if(n >= 2) p.mot.push(v*4/n/dt); }
         if(!g.lastA || dt >= .1){ g.lastA = A; g.lastT = g.sentT; }
       }
     },
@@ -2258,7 +2258,7 @@ const GAMES = {
       const el = SONGS[g.style].el, t = el.currentTime, d = el.duration || 1;
       setProg(t/d);
       // fecha os passos que já terminaram (com folga para quem dança um pouco atrasado)
-      const done = passoAt(t - 1.1);
+      const done = passoAt(t - 1.9);
       while(g.judged < done){
         g.judged++; const p = g.passos[g.judged] || (g.passos[g.judged] = {sims:[], miss:0, mot:[]}), ok = passoOk(p, g.judged);
         if(ok===null) continue;
